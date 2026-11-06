@@ -38,6 +38,10 @@
         .bg-ng { background-color: #dc3545; }
         .bg-info { background-color: #17a2b8; }
         .highlight { background-color: #e9ecef; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+        
+        /* 削除ボタンのスタイル */
+        .btn-delete { background-color: #6c757d; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .btn-delete:hover { background-color: #dc3545; }
     </style>
 </head>
 <body>
@@ -47,7 +51,7 @@
     <!-- 1. 全体俯瞰マトリクス表 -->
     <div class="matrix-section">
         <h2>現在の通信疎通マップ（PC間総当たり）</h2>
-        <p style="font-size: 13px; color: #666; margin: 0 0 10px 0;">※ 🟢:成功、🔴:失敗、⚪:未テスト</p>
+        <p style="font-size: 13px; color: #666; margin: 0 0 10px 0;">※ 🟢:成功、🔴:失敗、⚪:未テスト（間違えた履歴を削除すると元の色に自動で巻き戻ります）</p>
         <table class="matrix-table">
             <thead>
                 <tr>
@@ -90,12 +94,12 @@
                 <select name="src_ip" required>
                     <option value="">-- 実行した機器を選択 --</option>
                     {% for dev in device_list %}
-                        <option value="{{ dev.ip }}">{{ dev.name }} ({% if dev.type == 'Router' %}ルータ{% else %}{{ dev.ip }}{% endif %})</option>
+                        <option value="{{ dev.ip }}">{{ dev.name }} ({% if dev.type == 'Router' %}ルータ実機{% else %}{{ dev.ip }}{% endif %})</option>
                     {% endfor %}
                 </select>
 
-                <label style="font-weight: bold; display: block; margin-bottom: 5px;">② 実行結果ログ（ping/tracert/show）をペースト:</label>
-                <textarea name="log_text" placeholder="ここにログをコピペ..." required></textarea>
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">② 実行結果ログ（PC/実機ルータ）をペースト:</label>
+                <textarea name="log_text" placeholder="ログをペースト..." required></textarea>
                 
                 <button type="submit">解析してダッシュボードを更新</button>
             </form>
@@ -103,7 +107,7 @@
 
         <!-- 履歴一覧 -->
         <div class="history-section">
-            <h2>解析ログ履歴</h2>
+            <h2>最新の解析ログ履歴（直近5件）</h2>
             <table class="history-table">
                 <thead>
                     <tr>
@@ -114,6 +118,7 @@
                         <th>通信の種類</th>
                         <th>詳細結果 / 経路プロトコル比較</th>
                         <th>障害レイヤー</th>
+                        <th>操作</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -134,6 +139,12 @@
                         <td><span class="highlight">{{ record.comm_type }}</span></td>
                         <td>{{ record.summary }}</td>
                         <td><span style="color: #dc3545; font-weight: bold;">{{ record.layer_issue }}</span></td>
+                        <td>
+                            <!-- 削除ボタン（フォーム経由で安全にPOST通信します） -->
+                            <form action="/delete/{{ record.id }}" method="post" style="margin: 0; display: inline;">
+                                <button type="submit" class="btn-delete" onclick="return confirm('この記録を取り消しますか？（総当たりマップの色も自動で巻き戻ります）')">削除</button>
+                            </form>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
