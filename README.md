@@ -11,7 +11,6 @@ cd ./network-dashboard
 ```bash
 py -3.12 -m venv .venv
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-.\.venv\Scripts\activate.ps1
 ```
 3. 以下のコマンドを実行し、必要なライブラリをインストールする
 ```bash
