@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>NW監視ダッシュボード</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 25px; background-color: #f4f6f9; color: #333; }
+        h1, h2 { margin-top: 0; color: #222; }
+        
+        .matrix-section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); margin-bottom: 25px; }
+        .matrix-table { width: 100%; border-collapse: collapse; text-align: center; margin-top: 10px; }
+        .matrix-table th, .matrix-table td { border: 1px solid #dee2e6; padding: 10px; font-weight: bold; }
+        .matrix-table th { background-color: #e9ecef; }
+        .matrix-table td.cell-src { background-color: #f8f9fa; text-align: left; }
+        
+        .dot { display: inline-block; width: 20px; height: 20px; border-radius: 50%; line-height: 20px; font-size: 12px; color: white; }
+        .dot-ok { background-color: #28a745; }    
+        .dot-ng { background-color: #dc3545; }    
+        .dot-unknown { background-color: #6c757d; opacity: 0.3; } 
+        .dot-none { color: #ccc; font-weight: normal; }
+
+        .main-layout { display: flex; gap: 20px; flex-direction: column; }
+        @media(min-width: 950px) { .main-layout { flex-direction: row; } }
+        .form-section { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); height: fit-content; }
+        .history-section { flex: 2; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
+        
+        select, textarea { width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 4px; border: 1px solid #ced4da; box-sizing: border-box; }
+        textarea { height: 140px; }
+        button { background-color: #007bff; color: white; border: none; padding: 12px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; }
+        button:hover { background-color: #0056b3; }
+        
+        .history-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .history-table th, .history-table td { border: 1px solid #dee2e6; padding: 12px; text-align: left; font-size: 13px; }
+        .history-table th { background-color: #f8f9fa; }
+        
+        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; color: white; display: inline-block; }
+        .bg-ok { background-color: #28a745; }
+        .bg-ng { background-color: #dc3545; }
+        .bg-info { background-color: #17a2b8; }
+        .highlight { background-color: #e9ecef; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+    <h1>ネットワーク状態 監視ダッシュボード</h1>
+    
+    <!-- 1. 全体俯瞰マトリクス表 -->
+    <div class="matrix-section">
+        <h2>現在の通信疎通マップ（PC間総当たり）</h2>
+        <p style="font-size: 13px; color: #666; margin: 0 0 10px 0;">※ 🟢:成功、🔴:失敗、⚪:未テスト</p>
+        <table class="matrix-table">
+            <thead>
+                <tr>
+                    <th style="width: 12%;">送信元 ＼ 宛先</th>
+                    {% for dst in pc_names %}
+                        <th>{{ dst }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for src in pc_names %}
+                <tr>
+                    <td class="cell-src"><b>{{ src }}</b></td>
+                    {% for dst in pc_names %}
+                        <td>
+                            {% if matrix_status[src][dst] == 'OK' %}
+                                <span class="dot dot-ok">✔</span>
+                            {% elif matrix_status[src][dst] == 'NG' %}
+                                <span class="dot dot-ng">✕</span>
+                            {% elif matrix_status[src][dst] == '-' %}
+                                <span class="dot-none">-</span>
+                            {% else %}
+                                <span class="dot dot-unknown">?</span>
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 2. 下段：入力と履歴 -->
+    <div class="main-layout">
+        <!-- 入力フォーム -->
+        <div class="form-section">
+            <h2>テスト結果の追加</h2>
+            <form action="/submit" method="post">
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">① コマンドを実行した機器を選択:</label>
+                <select name="src_ip" required>
+                    <option value="">-- 実行した機器を選択 --</option>
+                    {% for dev in device_list %}
+                        <option value="{{ dev.ip }}">{{ dev.name }} ({% if dev.type == 'Router' %}ルータ{% else %}{{ dev.ip }}{% endif %})</option>
+                    {% endfor %}
+                </select>
+
+                <label style="font-weight: bold; display: block; margin-bottom: 5px;">② 実行結果ログ（ping/tracert/show）をペースト:</label>
+                <textarea name="log_text" placeholder="ここにログをコピペ..." required></textarea>
+                
+                <button type="submit">解析してダッシュボードを更新</button>
+            </form>
+        </div>
+
+        <!-- 履歴一覧 -->
+        <div class="history-section">
+            <h2>解析ログ履歴</h2>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>種別</th>
+                        <th>判定</th>
+                        <th>実行元</th>
+                        <th>宛先</th>
+                        <th>通信の種類</th>
+                        <th>詳細結果 / 経路プロトコル比較</th>
+                        <th>障害レイヤー</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td><b>{{ record.command_type.upper() }}</b></td>
+                        <td>
+                            {% if record.status == 'OK' %}
+                                <span class="badge bg-ok">成功</span>
+                            {% elif record.status == 'NG' %}
+                                <span class="badge bg-ng">異常</span>
+                            {% else %}
+                                <span class="badge bg-info">情報</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ record.src_info }}</td>
+                        <td>{{ record.dst_info }}</td>
+                        <td><span class="highlight">{{ record.comm_type }}</span></td>
+                        <td>{{ record.summary }}</td>
+                        <td><span style="color: #dc3545; font-weight: bold;">{{ record.layer_issue }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</body>
+</html>
