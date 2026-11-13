@@ -9,6 +9,7 @@
 
 そこで、これらの作業を効率化し、ネットワークの状態や通信経路を視覚的に把握できるようにすることを目的として、本アプリを開発した。
 
+**対応するネットワークトポロジー**
 ![NetworkTopo](docs/img/NetworkTopo.png)
 
 
@@ -39,3 +40,25 @@ pip install -r requirements.txt
 python src/app.py
 ```
 2. コマンドラインに表示されたURLにアクセスする。
+
+3. 左下の「テスト結果を追加」というフォームにコマンドを実行した機器とその出力結果を記述する。その後、「解析してダッシュボードを更新」というボタンを押す。
+
+**PCでの`ping`コマンドと、ダッシュボードでの入力**
+![pc cmd sample](docs/img/pc_cmd_sample.png)
+
+![input form](docs/img/input_form.png)
+
+4. 結果が図で表示される。これにより、「通信ができているか」、
+「どこで問題が発生しているか」、がひと目で可視化できる。
+
+**ダッシュボードでの出力結果**
+![result map](docs/img/result_map.png)
+
+![result log](docs/img/result_log.png)
+
+## 4. 設定内容
+このダッシュボードでは、`ping`, `tracert`, `show ip route`などのコマンドに対応し、その情報によって下図のような情報を確認できる。
+
+
+**結果の設定内容**
+![config description](docs/img/config_description.png)
